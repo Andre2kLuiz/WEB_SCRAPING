@@ -1,3 +1,4 @@
+
 import time
 import re
 import multiprocessing
@@ -62,6 +63,21 @@ USER_AGENT = (
 # ============================================================
 
 def buscar_pagina(termo):
+    """
+    Procura uma página correspondente ao termo
+    utilizando a API da Wikipédia.
+
+    Retorna:
+        titulo
+        url
+        tempo_busca
+    """
+
+    # --------------------------------------------------------
+    # INÍCIO DA MEDIÇÃO
+    # --------------------------------------------------------
+
+    inicio = time.perf_counter()
 
     api_url = "https://pt.wikipedia.org/w/api.php"
 
@@ -92,8 +108,17 @@ def buscar_pagina(termo):
         .get("search", [])
     )
 
+    # --------------------------------------------------------
+    # FINAL DA MEDIÇÃO
+    # --------------------------------------------------------
+
+    fim = time.perf_counter()
+
+    tempo_busca = fim - inicio
+
     if not resultados:
-        return None, None
+
+        return None, None, tempo_busca
 
     titulo = resultados[0]["title"]
 
@@ -109,7 +134,7 @@ def buscar_pagina(termo):
         + titulo_url
     )
 
-    return titulo, url
+    return titulo, url, tempo_busca
 
 
 # ============================================================
@@ -190,16 +215,12 @@ class WikipediaSpider(scrapy.Spider):
 
         seletores = [
 
-            # Principal
             "#mw-content-text .mw-parser-output > p",
 
-            # Alternativa
             ".mw-parser-output > p",
 
-            # Outra alternativa
             "#mw-content-text p",
 
-            # Último recurso
             "main p"
         ]
 
@@ -273,7 +294,6 @@ class WikipediaSpider(scrapy.Spider):
 
         if not textos:
 
-            # Tenta extrair diretamente do conteúdo principal
             conteudo = response.css(
                 "#mw-content-text .mw-parser-output"
             )
@@ -566,11 +586,7 @@ entrada = st.text_input(
     "Digite 5 termos separados por vírgula:",
 
     placeholder=(
-        "Universidade Federal do Rio Grande do Norte, "
-        "Ciência de Dados, "
-        "Aprendizado de Máquina, "
-        "Engenharia de Software, "
-        "Armazém de Dados"
+        "Digite 5 termos, por exemplo: dados, machine learning, python, web scraping, inteligência artificial"
     )
 )
 
@@ -591,6 +607,13 @@ if st.button(
         )
 
     else:
+
+        # ----------------------------------------------------
+        # INÍCIO DO TEMPO TOTAL
+        # ----------------------------------------------------
+
+        inicio_total = time.perf_counter()
+
 
         # ----------------------------------------------------
         # SEPARA OS TERMOS
@@ -630,6 +653,8 @@ if st.button(
 
             paginas = []
 
+            tempos_busca = []
+
 
             with st.spinner(
                 "🔎 Procurando as 5 páginas..."
@@ -637,11 +662,27 @@ if st.button(
 
                 for termo in termos:
 
+                    # ----------------------------------------
+                    # TEMPO INDIVIDUAL DO TERMO
+                    # ----------------------------------------
+
+                    inicio_termo = time.perf_counter()
+
                     try:
 
-                        titulo, url = buscar_pagina(
+                        titulo, url, tempo_busca = buscar_pagina(
                             termo
                         )
+
+
+                        # Guarda o tempo da busca
+                        tempos_busca.append({
+
+                            "termo": termo,
+
+                            "tempo_busca": tempo_busca
+
+                        })
 
 
                         if titulo and url:
@@ -652,7 +693,10 @@ if st.button(
 
                                 "titulo": titulo,
 
-                                "url": url
+                                "url": url,
+
+                                "tempo_busca": tempo_busca
+
                             })
 
                         else:
@@ -663,6 +707,20 @@ if st.button(
 
 
                     except Exception as erro:
+
+                        fim_termo = time.perf_counter()
+
+                        tempo_erro = (
+                            fim_termo - inicio_termo
+                        )
+
+                        tempos_busca.append({
+
+                            "termo": termo,
+
+                            "tempo_busca": tempo_erro
+
+                        })
 
                         st.error(
                             f"Erro ao buscar '{termo}': {erro}"
@@ -683,7 +741,7 @@ if st.button(
 
 
             # ------------------------------------------------
-            # URLs
+            # URLS
             # ------------------------------------------------
 
             urls = [
@@ -698,6 +756,9 @@ if st.button(
             # SCRAPY
             # ------------------------------------------------
 
+            inicio_scrapy = time.perf_counter()
+
+
             with st.spinner(
                 "🕷️ Scrapy está extraindo os textos..."
             ):
@@ -705,6 +766,15 @@ if st.button(
                 resultado = coletar_texto_scrapy(
                     urls
                 )
+
+
+            fim_scrapy = time.perf_counter()
+
+
+            # Tempo real incluindo o processo
+            tempo_scrapy_real = (
+                fim_scrapy - inicio_scrapy
+            )
 
 
             # ------------------------------------------------
@@ -718,8 +788,27 @@ if st.button(
             # LIMPA O TEXTO
             # ------------------------------------------------
 
+            inicio_limpeza = time.perf_counter()
+
             texto_limpo = limpar_texto(
                 texto_completo
+            )
+
+            fim_limpeza = time.perf_counter()
+
+            tempo_limpeza = (
+                fim_limpeza - inicio_limpeza
+            )
+
+
+            # ------------------------------------------------
+            # TEMPO TOTAL
+            # ------------------------------------------------
+
+            fim_total = time.perf_counter()
+
+            tempo_total = (
+                fim_total - inicio_total
             )
 
 
@@ -743,6 +832,22 @@ if st.button(
 
             st.session_state["tempo_scrapy"] = (
                 resultado["tempo"]
+            )
+
+            st.session_state["tempo_scrapy_real"] = (
+                tempo_scrapy_real
+            )
+
+            st.session_state["tempos_busca"] = (
+                tempos_busca
+            )
+
+            st.session_state["tempo_limpeza"] = (
+                tempo_limpeza
+            )
+
+            st.session_state["tempo_total"] = (
+                tempo_total
             )
 
             st.session_state["processado"] = True
@@ -794,6 +899,147 @@ if st.session_state.get(
         st.session_state["tempo_scrapy"]
     )
 
+    tempo_scrapy_real = (
+        st.session_state["tempo_scrapy_real"]
+    )
+
+    tempos_busca = (
+        st.session_state["tempos_busca"]
+    )
+
+    tempo_limpeza = (
+        st.session_state["tempo_limpeza"]
+    )
+
+    tempo_total = (
+        st.session_state["tempo_total"]
+    )
+
+
+    # ========================================================
+    # DESEMPENHO
+    # ========================================================
+
+    st.divider()
+
+    st.subheader(
+        "⏱️ Desempenho da aplicação"
+    )
+
+
+    # --------------------------------------------------------
+    # TEMPO TOTAL E MÉDIAS
+    # --------------------------------------------------------
+
+    tempo_busca_total = sum(
+        item["tempo_busca"]
+        for item in tempos_busca
+    )
+
+
+    if paginas:
+
+        tempo_medio_busca = (
+            tempo_busca_total
+            / len(tempos_busca)
+        )
+
+        tempo_medio_pagina = (
+            tempo_scrapy_real
+            / len(paginas)
+        )
+
+    else:
+
+        tempo_medio_busca = 0
+
+        tempo_medio_pagina = 0
+
+
+    col1, col2, col3, col4 = st.columns(4)
+
+
+    with col1:
+
+        st.metric(
+            "⏱️ Tempo total",
+            f"{tempo_total:.4f} s"
+        )
+
+
+    with col2:
+
+        st.metric(
+            "🔎 Tempo das buscas",
+            f"{tempo_busca_total:.4f} s"
+        )
+
+
+    with col3:
+
+        st.metric(
+            "🕷️ Tempo Scrapy",
+            f"{tempo_scrapy_real:.4f} s"
+        )
+
+
+    with col4:
+
+        st.metric(
+            "📄 Tempo médio/página",
+            f"{tempo_medio_pagina:.4f} s"
+        )
+
+
+    # ========================================================
+    # DETALHAMENTO DOS TEMPOS DE BUSCA
+    # ========================================================
+
+    st.subheader(
+        "🔎 Tempo de busca por termo"
+    )
+
+
+    for item in tempos_busca:
+
+        st.write(
+            f"**{item['termo']}**"
+        )
+
+        st.caption(
+            f"⏱️ Tempo para localizar a página: "
+            f"{item['tempo_busca']:.4f} segundos"
+        )
+
+
+    # ========================================================
+    # DETALHAMENTO DO SCRAPY
+    # ========================================================
+
+    with st.expander(
+        "🕷️ Detalhes do tempo do Scrapy"
+    ):
+
+        st.write(
+            f"**Tempo medido dentro do processo Scrapy:** "
+            f"{tempo_scrapy:.4f} segundos"
+        )
+
+        st.write(
+            f"**Tempo real incluindo criação/finalização do processo:** "
+            f"{tempo_scrapy_real:.4f} segundos"
+        )
+
+        st.write(
+            f"**Tempo médio por página:** "
+            f"{tempo_medio_pagina:.4f} segundos"
+        )
+
+        st.write(
+            f"**Tempo de limpeza do texto:** "
+            f"{tempo_limpeza:.4f} segundos"
+        )
+
 
     # ========================================================
     # PÁGINAS
@@ -814,6 +1060,11 @@ if st.session_state.get(
 
         st.caption(
             pagina["url"]
+        )
+
+        st.caption(
+            f"🔎 Busca da página: "
+            f"{pagina['tempo_busca']:.4f} s"
         )
 
 
@@ -910,8 +1161,8 @@ if st.session_state.get(
     with col4:
 
         st.metric(
-            "Tempo Scrapy",
-            f"{tempo_scrapy:.4f} s"
+            "Tempo total",
+            f"{tempo_total:.4f} s"
         )
 
 
@@ -1004,7 +1255,10 @@ if st.session_state.get(
     # NUVEM DE PALAVRAS
     # ========================================================
 
-    mascara = np.array(Image.open("wiki.jpeg").convert("RGB"))
+    mascara = np.array(
+        Image.open("wiki.jpeg").convert("RGB")
+    )
+
 
     st.divider()
 
@@ -1028,9 +1282,12 @@ if st.session_state.get(
             collocations=False,
 
             min_font_size=10,
+
             mask=mascara,
+
             contour_width=1,
-            contour_color='steelblue'
+
+            contour_color="steelblue"
 
         ).generate(
             texto_limpo
@@ -1066,3 +1323,9 @@ if st.session_state.get(
             "Não existe texto suficiente para "
             "gerar a nuvem de palavras."
         )
+
+
+
+
+
+
