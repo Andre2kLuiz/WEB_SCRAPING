@@ -513,11 +513,11 @@ A `Queue` permite que os resultados da coleta sejam enviados do processo do Scra
 | Requisições HTTP                  | Requests                 | Scrapy              |
 | Análise HTML                      | BeautifulSoup            | Seletores do Scrapy |
 | Estrutura                         | Mais simples             | Mais estruturada    |
-| Facilidade para projetos pequenos | ⭐⭐⭐⭐⭐                    | ⭐⭐⭐                 |
-| Escalabilidade                    | ⭐⭐⭐                      | ⭐⭐⭐⭐⭐               |
+| Facilidade para projetos pequenos | ⭐⭐⭐⭐⭐               | ⭐⭐⭐              |
+| Escalabilidade                    | ⭐⭐⭐                   | ⭐⭐⭐⭐⭐          |
 | Requisições concorrentes          | Manual                   | Nativa              |
-| Spider                            | ❌                        | ✅                   |
-| Pipeline de Scraping              | ❌                        | ✅                   |
+| Spider                            | ❌                       | ✅                  |
+| Pipeline de Scraping              | ❌                       | ✅                  |
 | Controle de coleta                | Básico                   | Avançado            |
 | Tempo de coleta                   | Não medido               | Medido              |
 | Complexidade                      | Menor                    | Maior               |
