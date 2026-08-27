@@ -1,0 +1,9 @@
+requests
+beautifulsoup4
+wordcloud
+matplotlib
+numpy
+Pillow
+scrapy
+crochet
+streamlit

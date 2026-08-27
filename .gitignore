@@ -1,0 +1,20 @@
+# Ambientes Virtuais (Venv)
+venv/
+.venv/
+env/
+ENV/
+
+# Arquivos temporários do Python (Byte-compiled)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Variáveis de ambiente e credenciais (Segurança!)
+.env
+*.pot
+*.pyuser
